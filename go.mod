@@ -130,16 +130,16 @@ require (
 	github.com/rancher/channelserver v0.7.0
 	github.com/rancher/dynamiclistener v0.6.0-rc1
 	github.com/rancher/eks-operator v1.9.0-rc.9
-	github.com/rancher/fleet/pkg/apis v0.10.0-rc.16
+	github.com/rancher/fleet/pkg/apis v0.10.0-rc.19
 	github.com/rancher/gke-operator v1.9.0-rc.8
 	github.com/rancher/kubernetes-provider-detector v0.1.5
 	github.com/rancher/lasso v0.0.0-20240603075835-701e919d08b7
 	github.com/rancher/machine v0.15.0-rancher114
 	github.com/rancher/norman v0.0.0-20240604183301-20cd23aadce1
 	github.com/rancher/rancher/pkg/client v0.0.0
-	github.com/rancher/remotedialer v0.3.2
-	github.com/rancher/rke v1.6.0-rc8
-	github.com/rancher/steve v0.0.0-20240617145219-9ac9be9c0e21
+	github.com/rancher/remotedialer v0.4.0
+	github.com/rancher/rke v1.6.0-rc9
+	github.com/rancher/steve v0.0.0-20240703132554-22a06dd14f51
 	github.com/rancher/system-upgrade-controller/pkg/apis v0.0.0-20210727200656-10b094e30007
 	github.com/rancher/wrangler/v2 v2.2.0-rc6
 	github.com/rancher/wrangler/v3 v3.0.0-rc2
@@ -164,9 +164,9 @@ require (
 	gopkg.in/yaml.v2 v2.4.0
 	gopkg.in/yaml.v3 v3.0.1
 	helm.sh/helm/v3 v3.15.1
-	k8s.io/api v0.30.1
+	k8s.io/api v0.30.2
 	k8s.io/apiextensions-apiserver v0.30.1
-	k8s.io/apimachinery v0.30.1
+	k8s.io/apimachinery v0.30.2
 	k8s.io/apiserver v0.30.1
 	k8s.io/cli-runtime v0.30.1
 	k8s.io/client-go v12.0.0+incompatible
