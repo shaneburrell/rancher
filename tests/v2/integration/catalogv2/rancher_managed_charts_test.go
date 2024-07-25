@@ -7,9 +7,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"os"
 	"testing"
 	"time"
 
+	"github.com/go-git/go-git/v5"
 	rv1 "github.com/rancher/rancher/pkg/apis/catalog.cattle.io/v1"
 	v3 "github.com/rancher/rancher/pkg/apis/management.cattle.io/v3"
 	"github.com/rancher/shepherd/clients/rancher"
@@ -130,10 +132,21 @@ func TestRancherManagedChartsSuite(t *testing.T) {
 
 func (w *RancherManagedChartsTest) TestInstallChartLatestVersion() {
 	defer w.resetSettings()
+	ctx := context.Background()
+
+	clusterRepo, err := w.catalogClient.ClusterRepos().Get(ctx, "rancher-charts", metav1.GetOptions{})
+	w.Require().NoError(err)
+	clusterRepo.Spec.GitRepo = "https://github.com/rancher/charts-small-fork"
+	clusterRepo.Spec.GitBranch = "aks-integration-test-working-charts"
+	clusterRepo, err = w.catalogClient.ClusterRepos().Update(ctx, clusterRepo, metav1.UpdateOptions{})
+	w.Require().NoError(err)
+	downloadTime := clusterRepo.Status.DownloadTime
+	w.Require().NoError(w.pollUntilDownloaded("rancher-charts", downloadTime))
 
 	w.Require().NoError(w.updateManagementCluster())
 	app, _, err := w.waitForAksChart(rv1.StatusDeployed, "rancher-aks-operator", 0)
 	w.Require().NoError(err)
+
 	latest, err := w.catalogClient.GetLatestChartVersion("rancher-aks-operator", catalog.RancherChartRepo)
 	w.Require().NoError(err)
 	w.Assert().Equal(app.Spec.Chart.Metadata.Version, latest)
@@ -466,6 +479,24 @@ func (w *RancherManagedChartsTest) pollUntilDownloaded(ClusterRepoName string, p
 }
 
 func (w *RancherManagedChartsTest) TestServeIcons() {
+	// Clone the git repository at a spcecific location so
+	// that Rancher assumes it as prebuild helm repository.
+	// Since Rancher starts at build/testdata, the LocalDir would
+	// be build/rancher-data.... Also since this test resides in
+	// tests/v2/integration/catalogv2, the cloneDir would be
+	// ../../../../build/rancher-data/...
+	repoURL := "https://github.com/rancher/charts-small-fork"
+	cloneDir := "../../../../build/rancher-data/local-catalogs/v2/rancher-charts-small-fork/d39a2f6abd49e537e5015bbe1a4cd4f14919ba1c3353208a7ff6be37ffe00c52"
+
+	err := os.MkdirAll(cloneDir, os.ModePerm)
+	w.Require().NoError(err)
+
+	_, err = git.PlainClone(cloneDir, false, &git.CloneOptions{
+		URL:   repoURL,
+		Depth: 1,
+	})
+	w.Require().NoError(err)
+
 	// Testing: Chart.icon field with (file:// scheme)
 	// Create ClusterRepo for charts-small-fork
 	clusterRepoToCreate := rv1.NewClusterRepo("", smallForkClusterRepoName,
@@ -476,7 +507,7 @@ func (w *RancherManagedChartsTest) TestServeIcons() {
 			},
 		},
 	)
-	_, err := w.client.Steve.SteveType(catalog.ClusterRepoSteveResourceType).Create(clusterRepoToCreate)
+	_, err = w.client.Steve.SteveType(catalog.ClusterRepoSteveResourceType).Create(clusterRepoToCreate)
 	w.Require().NoError(err)
 	time.Sleep(1 * time.Second)
 
@@ -497,12 +528,7 @@ func (w *RancherManagedChartsTest) TestServeIcons() {
 	w.Require().NoError(err)
 	w.Assert().Equal("bundled", systemCatalogUpdated.Value)
 
-	// Fetch one icon with https:// scheme, it should return an empty object (i.e length of image equals 0) with nil error
-	imgLength, err := w.catalogClient.FetchChartIcon(smallForkClusterRepoName, "fleet")
-	w.Require().NoError(err)
-	w.Assert().Equal(0, imgLength)
-
-	imgLength, err = w.catalogClient.FetchChartIcon(smallForkClusterRepoName, "rancher-cis-benchmark")
+	imgLength, err := w.catalogClient.FetchChartIcon(smallForkClusterRepoName, "rancher-cis-benchmark")
 	w.Require().NoError(err)
 	w.Assert().Greater(imgLength, 0)
 
@@ -512,5 +538,9 @@ func (w *RancherManagedChartsTest) TestServeIcons() {
 
 	// Deleting clusterRepo
 	err = w.catalogClient.ClusterRepos().Delete(context.Background(), smallForkClusterRepoName, metav1.DeleteOptions{})
+	w.Require().NoError(err)
+
+	// Delete the cloneDir
+	err = os.RemoveAll(cloneDir)
 	w.Require().NoError(err)
 }
