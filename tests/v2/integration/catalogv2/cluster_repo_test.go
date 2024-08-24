@@ -54,8 +54,8 @@ const (
 	StableHTTPRepoURL   = "https://releases.rancher.com/server-charts/stable"
 
 	GitClusterRepoName      = "test-git-cluster-repo"
-	RancherChartsGitRepoURL = "https://git.rancher.io/charts"
-	RKE2ChartsGitRepoURL    = "https://git.rancher.io/rke2-charts"
+	RancherChartsGitRepoURL = "https://github.com/rancher/charts"
+	RKE2ChartsGitRepoURL    = "https://github.com/rancher/rke2-charts"
 
 	OCIClusterRepoName = "test-oci-cluster-repo"
 )
@@ -683,6 +683,15 @@ func (c *ClusterRepoTestSuite) TestOCIRepoChartInstallation() {
 		return false, nil
 	})
 	assert.NoError(c.T(), err)
+
+	appCR, err := catalogClient.Apps("default").Get(context.TODO(), "testreleasename", metav1.GetOptions{})
+	assert.NoError(c.T(), err)
+
+	// Every AppCR installed through rancher must
+	// have the catalog clusterRepoName label
+	value, ok := appCR.Labels["catalog.cattle.io/cluster-repo-name"]
+	assert.True(c.T(), ok)
+	assert.Equal(c.T(), value, "oci")
 
 	// Validate uninstalling the chart
 	chartUninstallAction := types.ChartUninstallAction{

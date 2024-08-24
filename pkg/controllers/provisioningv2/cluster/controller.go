@@ -8,6 +8,7 @@ import (
 	"github.com/rancher/norman/types/convert"
 	v3 "github.com/rancher/rancher/pkg/apis/management.cattle.io/v3"
 	v1 "github.com/rancher/rancher/pkg/apis/provisioning.cattle.io/v1"
+	"github.com/rancher/rancher/pkg/capr"
 	"github.com/rancher/rancher/pkg/features"
 	fleetconst "github.com/rancher/rancher/pkg/fleet"
 	capicontrollers "github.com/rancher/rancher/pkg/generated/controllers/cluster.x-k8s.io/v1beta1"
@@ -316,6 +317,28 @@ func (h *handler) createNewCluster(cluster *v1.Cluster, status v1.ClusterStatus,
 		spec.AgentEnvVars = append(spec.AgentEnvVars, corev1.EnvVar{
 			Name:  env.Name,
 			Value: env.Value,
+		})
+	}
+
+	if cluster.Spec.RKEConfig != nil {
+		if dir := cluster.Spec.RKEConfig.DataDirectories.SystemAgent; dir != "" {
+			spec.AgentEnvVars = append(spec.AgentEnvVars, corev1.EnvVar{
+				Name:  capr.SystemAgentDataDirEnvVar,
+				Value: dir,
+			})
+		}
+	}
+
+	switch capr.GetRuntime(cluster.Spec.KubernetesVersion) {
+	case capr.RuntimeRKE2:
+		spec.AgentEnvVars = append(spec.AgentEnvVars, corev1.EnvVar{
+			Name:  capr.SystemAgentFallbackPathEnvVar,
+			Value: "/opt/rke2/bin",
+		})
+	default:
+		spec.AgentEnvVars = append(spec.AgentEnvVars, corev1.EnvVar{
+			Name:  capr.SystemAgentFallbackPathEnvVar,
+			Value: "/opt/bin",
 		})
 	}
 
